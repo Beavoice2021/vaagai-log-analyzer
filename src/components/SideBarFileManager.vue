@@ -36,8 +36,7 @@ import { MAVLink20Processor as MAVLink } from '../libs/mavlink'
 
 const worker = new Worker()
 
-worker.addEventListener('message', function (event) {
-})
+
 
 export default {
     name: 'Dropzone',
@@ -147,25 +146,29 @@ export default {
             })
         },
         process: function (file) {
-            this.state.file = file.name
-            this.state.processStatus = 'Pre-processing...'
-            this.state.processPercentage = 100
-            this.file = file
-            const reader = new FileReader()
-            reader.onload = function (e) {
-                const data = reader.result
+            this.state.file = file.name;
+
+            // 🔥 START LOADING
+            this.state.mapLoading = true;
+            this.state.plotLoading = true;
+
+            this.state.processStatus = 'Processing...';
+            this.state.processPercentage = 50;
+
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                const data = reader.result;
+
                 worker.postMessage({
                     action: 'parse',
                     file: data,
                     isTlog: (file.name.endsWith('tlog')),
                     isDji: (file.name.endsWith('txt'))
-                })
-            }
-            this.state.logType = file.name.endsWith('tlog') ? 'tlog' : 'bin'
-            if (file.name.endsWith('.txt')) {
-                this.state.logType = 'dji'
-            }
-            reader.readAsArrayBuffer(file)
+                });
+            };
+
+            reader.readAsArrayBuffer(file);
         },
         uploadFile () {
             this.uploadStarted = true
@@ -239,27 +242,42 @@ export default {
             }
         })
         worker.onmessage = (event) => {
-            if (event.data.percentage) {
-                this.state.processPercentage = event.data.percentage
-            } else if (event.data.availableMessages) {
-                this.$eventHub.$emit('messageTypes', event.data.availableMessages)
-            } else if (event.data.metadata) {
-                this.state.metadata = event.data.metadata
-            } else if (event.data.messages) {
-                this.state.messages = event.data.messages
-                this.$eventHub.$emit('messages')
-            } else if (event.data.messagesDoneLoading) {
-                this.$eventHub.$emit('messagesDoneLoading')
-            } else if (event.data.messageType) {
-                this.state.messages[event.data.messageType] = event.data.messageList
-                this.$eventHub.$emit('messages')
-            } else if (event.data.files) {
-                this.state.files = event.data.files
-                this.$eventHub.$emit('messages')
-            } else if (event.data.url) {
-                this.downloadFileFromURL(event.data.url)
+            const data = event.data;
+
+            // ✅ STOP LOADER WHEN DONE
+            if (data.messagesDoneLoading) {
+                this.state.mapLoading = false;
+                this.state.plotLoading = false;
+
+                this.state.processStatus = "Processed!";
+                this.state.processPercentage = 100;
             }
-        }
+
+            if (data.percentage) {
+                this.state.processPercentage = data.percentage;
+            } 
+            else if (data.availableMessages) {
+                this.$eventHub.$emit('messageTypes', data.availableMessages);
+            } 
+            else if (data.metadata) {
+                this.state.metadata = data.metadata;
+            } 
+            else if (data.messages) {
+                this.state.messages = data.messages;
+                this.$eventHub.$emit('messages');
+            } 
+            else if (data.messageType) {
+                this.state.messages[data.messageType] = data.messageList;
+                this.$eventHub.$emit('messages');
+            } 
+            else if (data.files) {
+                this.state.files = data.files;
+                this.$eventHub.$emit('messages');
+            } 
+            else if (data.url) {
+                this.downloadFileFromURL(data.url);
+            }
+        };
         const url = document.location.search.split('?file=')[1]
         if (url) {
             this.onLoadSample(decodeURIComponent(url))

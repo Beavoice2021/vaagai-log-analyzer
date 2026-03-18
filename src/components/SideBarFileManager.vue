@@ -241,11 +241,54 @@ export default {
                 })
             }
         })
-        worker.onmessage = (event) => {
+       worker.onmessage = (event) => {
             const data = event.data;
 
-            // ✅ STOP LOADER WHEN DONE
+            console.log("====================================");
+            console.log("📩 WORKER MESSAGE RECEIVED");
+            console.log("Full Data:", data);
+
+            // 🔍 Detect type of message
+            if (data.percentage !== undefined) {
+                console.log("📊 Progress अपडेट:", data.percentage);
+            }
+
+            if (data.availableMessages) {
+                console.log("📦 Available Message Types:", data.availableMessages);
+            }
+
+            if (data.metadata) {
+                console.log("🧾 Metadata received:", data.metadata);
+            }
+
+            if (data.messages) {
+                console.log("📨 Messages received. Count:",
+                    Object.keys(data.messages).length
+                );
+            }
+
+            if (data.messageType) {
+                console.log("📌 Specific Message Type:", data.messageType);
+            }
+
+            if (data.files) {
+                console.log("📁 Files received:", data.files);
+            }
+
+            if (data.url) {
+                console.log("⬇️ Download URL received:", data.url);
+            }
+
             if (data.messagesDoneLoading) {
+                console.log("✅ ALL MESSAGES LOADED");
+            }
+
+            console.log("====================================");
+
+            // ✅ STOP LOADER (SAFE VERSION)
+            if (data.messages || data.messagesDoneLoading) {
+                console.log("🛑 STOPPING LOADER");
+
                 this.state.mapLoading = false;
                 this.state.plotLoading = false;
 
@@ -253,7 +296,8 @@ export default {
                 this.state.processPercentage = 100;
             }
 
-            if (data.percentage) {
+            // ✅ Normal flow continues
+            if (data.percentage !== undefined) {
                 this.state.processPercentage = data.percentage;
             } 
             else if (data.availableMessages) {

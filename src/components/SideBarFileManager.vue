@@ -321,7 +321,7 @@ export default {
             else if (data.url) {
                 this.downloadFileFromURL(data.url);
             }
-        };
+        }
         const url = document.location.search.split('?file=')[1]
         if (url) {
             this.onLoadSample(decodeURIComponent(url))
